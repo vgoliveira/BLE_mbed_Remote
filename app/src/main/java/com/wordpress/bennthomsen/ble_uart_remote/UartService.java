@@ -149,7 +149,7 @@ public class UartService extends Service {
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
 
-    public class LocalBinder extends Binder {
+        public class LocalBinder extends Binder {
         UartService getService() {
             return UartService.this;
         }

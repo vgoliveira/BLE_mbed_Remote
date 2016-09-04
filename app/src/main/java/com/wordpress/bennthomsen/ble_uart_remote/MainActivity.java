@@ -222,8 +222,8 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
 
     //UART service connected/disconnected
     private ServiceConnection mServiceConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, IBinder rawBinder) {
-            mService = ((UartService.LocalBinder) rawBinder).getService();
+        public void onServiceConnected(ComponentName className, IBinder rawBinder) { //importante: chamado pelo Android em bindService
+            mService = ((UartService.LocalBinder) rawBinder).getService(); // importante
             Log.d(TAG, "onServiceConnected mService= " + mService);
             if (!mService.initialize()) {
                 Log.e(TAG, "Unable to initialize Bluetooth");
@@ -237,7 +237,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             mService = null;
         }
     };
-
+/* comentado por vinicius
     private Handler mHandler = new Handler() {
         @Override
 
@@ -246,6 +246,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
 
         }
     };
+comentado por vinicius */
 
     private final BroadcastReceiver UARTStatusChangeReceiver = new BroadcastReceiver() {
 
@@ -316,7 +317,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                     }
                 });
             }
-            //*********************//
+            //****************w*****//
             if (action.equals(UartService.DEVICE_DOES_NOT_SUPPORT_UART)){
                 showMessage("Device doesn't support UART. Disconnecting");
                 mService.disconnect();
