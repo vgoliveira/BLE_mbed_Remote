@@ -32,6 +32,7 @@ package com.wordpress.bennthomsen.ble_uart_remote;
         import android.os.IBinder;
         import android.support.v4.content.LocalBroadcastManager;
         import android.util.Log;
+        import android.widget.Toast;
 
         import java.util.List;
         import java.util.UUID;
@@ -87,7 +88,7 @@ public class UartService extends Service {
                 intentAction = ACTION_GATT_CONNECTED;
                 mConnectionState = STATE_CONNECTED;
                 broadcastUpdate(intentAction);
-                Log.i(TAG, "Connected to GATT server.");
+                Log.i(TAG, "Connected to GATT server. newState = " + newState);
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "Attempting to start service discovery:" +
                         mBluetoothGatt.discoverServices());
@@ -95,7 +96,7 @@ public class UartService extends Service {
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
                 mConnectionState = STATE_DISCONNECTED;
-                Log.i(TAG, "Disconnected from GATT server.");
+                Log.i(TAG, "Disconnected from GATT server newState = " + newState);
                 broadcastUpdate(intentAction);
             }
         }
@@ -119,7 +120,7 @@ public class UartService extends Service {
                 broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
             }
         }
-
+        // VGO Not being processed in the MVP version
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt,
                                             BluetoothGattCharacteristic characteristic) {
@@ -229,12 +230,11 @@ public class UartService extends Service {
             Log.w(TAG, "Device not found.  Unable to connect.");
             return false;
         }
-        // We want to directly connect to the device, so we are setting the autoConnect
-        // parameter to false.
-        mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
+        Log.v(TAG, "Device founded");
         Log.d(TAG, "Trying to create a new connection.");
         mBluetoothDeviceAddress = address;
         mConnectionState = STATE_CONNECTING;
+        mBluetoothGatt = device.connectGatt(this, true, mGattCallback); //com TRUE resolveu problema, mas pode demorar + 10 seg
         return true;
     }
 
@@ -250,7 +250,7 @@ public class UartService extends Service {
             return;
         }
         mBluetoothGatt.disconnect();
-        // mBluetoothGatt.close();
+
     }
 
     /**
@@ -360,7 +360,8 @@ public class UartService extends Service {
         RxChar.setValue(value);
         boolean status = mBluetoothGatt.writeCharacteristic(RxChar);
 
-        Log.d(TAG, "write TXchar - status=" + status);
+        Log.d(TAG, "write RXchar - status=" + status);
+        Log.d(TAG, "write RXchar - value=" + value);
     }
 
     private void showMessage(String msg) {

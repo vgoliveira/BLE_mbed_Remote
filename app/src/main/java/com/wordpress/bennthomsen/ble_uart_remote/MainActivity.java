@@ -17,16 +17,10 @@
 
 package com.wordpress.bennthomsen.ble_uart_remote;
 
-import java.io.UnsupportedEncodingException;
-import java.text.DateFormat;
-import java.util.Date;
-
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -36,48 +30,37 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
-import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.RadioGroup;
-import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.UnsupportedEncodingException;
+import java.text.DateFormat;
+import java.util.Date;
+
 public class MainActivity extends Activity implements RadioGroup.OnCheckedChangeListener {
     private static final int REQUEST_SELECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
-    private static final int UART_PROFILE_READY = 10;
     public static final String TAG = "nRFUART";
     private static final int UART_PROFILE_CONNECTED = 20;
     private static final int UART_PROFILE_DISCONNECTED = 21;
-    private static final int STATE_OFF = 10;
-    private static final String LED2OFF = "led2 0.0";
+       private static final String LED2OFF = "led2 0.0";
     private static final String LED2ON = "led2 1.0";
-    private static final double SLIDER_MAX = 20.0;
 
 
-    TextView mRemoteRssiVal;
-    RadioGroup mRg;
-    private int mState = UART_PROFILE_DISCONNECTED;
+       private int mState = UART_PROFILE_DISCONNECTED;
     private UartService mService = null;
     private BluetoothDevice mDevice = null;
     private BluetoothAdapter mBtAdapter = null;
-    private ListView messageListView;
-    private ArrayAdapter<String> listAdapter;
-    private Button btnConnectDisconnect,btnSend;
+    private Button btnConnectDisconnect;
     private Switch Led2SwitchToggle;
-    private SeekBar Led2LevelChange;
-    private EditText edtMessage;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,16 +71,8 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             finish();
             return;
         }
-        messageListView = (ListView) findViewById(R.id.listMessage);
-        listAdapter = new ArrayAdapter<String>(this, R.layout.message_detail);
-        messageListView.setAdapter(listAdapter);
-        messageListView.setDivider(null);
         btnConnectDisconnect=(Button) findViewById(R.id.btn_select);
-        btnSend=(Button) findViewById(R.id.sendButton);
         Led2SwitchToggle=(Switch) findViewById(R.id.led2Switch);
-        Led2LevelChange=(SeekBar) findViewById(R.id.LedLevel);
-        edtMessage = (EditText) findViewById(R.id.sendText);
-        Led2LevelChange.setEnabled(false);                    // Programmtically Disable slider (Setting in main.xml does not work
         service_init();
 
 
@@ -115,7 +90,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                     if (btnConnectDisconnect.getText().equals("Connect")){
 
                         //Connect button pressed, open DeviceListActivity class, with popup windows that scan for devices
-
                         Intent newIntent = new Intent(MainActivity.this, DeviceListActivity.class);
                         startActivityForResult(newIntent, REQUEST_SELECT_DEVICE);
                     } else {
@@ -129,42 +103,16 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 }
             }
         });
-        // Handler Send button
-        btnSend.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                EditText editText = (EditText) findViewById(R.id.sendText);
-                String message = editText.getText().toString();
-                byte[] value;
-                try {
-                    //send data to service
-                    value = message.getBytes("UTF-8");
-                    mService.writeRXCharacteristic(value);
-                    //Update the log with time stamp
-                    String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
-                    listAdapter.add("["+currentDateTimeString+"] TX: "+ message);
-                    messageListView.smoothScrollToPosition(listAdapter.getCount() - 1);
-                    edtMessage.setText("");
-                } catch (UnsupportedEncodingException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-
-            }
-        });
 
         // Handler LED Switch
-
         Led2SwitchToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 byte[] value;
                 try {
                     if (isChecked) {
                         value = LED2ON.getBytes("UTF-8");    // The switch is on
-                        Led2LevelChange.setProgress((int) SLIDER_MAX);
                     } else {
                         value = LED2OFF.getBytes("UTF-8");     // The switch is off
-                        Led2LevelChange.setProgress(0);
                     }
                     mService.writeRXCharacteristic(value);
                 } catch (UnsupportedEncodingException e) {
@@ -173,57 +121,13 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 }
             }
         });
-
-        // Handler LED Level
-
-        Led2LevelChange.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            int progress = 0;
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progressValue, boolean fromUser) {
-                if (progressValue != progress) {
-                    progress = progressValue;
-                    byte[] value;
-                    try {
-                        String cmdString = "led2 " + progress / SLIDER_MAX;
-                        value = cmdString.getBytes("UTF-8");
-                        mService.writeRXCharacteristic(value);
-                    } catch (UnsupportedEncodingException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                // Do something here,
-                //if you want to do anything at the start of
-                // touching the seekbar
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                // Display the value in textview
-                byte[] value;
-                try {
-                    String cmdString = "led2 " + seekBar.getProgress() / SLIDER_MAX;
-                    value = cmdString.getBytes("UTF-8");
-                    mService.writeRXCharacteristic(value);
-                } catch (UnsupportedEncodingException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
-        });
-
-        // Set initial UI state
 
     }
 
     //UART service connected/disconnected
     private ServiceConnection mServiceConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, IBinder rawBinder) { //importante: chamado pelo Android em bindService
-            mService = ((UartService.LocalBinder) rawBinder).getService(); // importante
+        public void onServiceConnected(ComponentName className, IBinder rawBinder) {
+            mService = ((UartService.LocalBinder) rawBinder).getService();
             Log.d(TAG, "onServiceConnected mService= " + mService);
             if (!mService.initialize()) {
                 Log.e(TAG, "Unable to initialize Bluetooth");
@@ -237,16 +141,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             mService = null;
         }
     };
-/* comentado por vinicius
-    private Handler mHandler = new Handler() {
-        @Override
-
-        //Handler events that received from UART service
-        public void handleMessage(Message msg) {
-
-        }
-    };
-comentado por vinicius */
 
     private final BroadcastReceiver UARTStatusChangeReceiver = new BroadcastReceiver() {
 
@@ -254,70 +148,39 @@ comentado por vinicius */
             String action = intent.getAction();
 
             final Intent mIntent = intent;
-            //*******Service Connected**************//
+
             if (action.equals(UartService.ACTION_GATT_CONNECTED)) {
                 runOnUiThread(new Runnable() {
                     public void run() {
                         String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                         Log.d(TAG, "UART_CONNECT_MSG");
                         btnConnectDisconnect.setText("Disconnect");
-                        edtMessage.setEnabled(true);
-                        btnSend.setEnabled(true);
-                        Led2LevelChange.setEnabled(true);
                         Led2SwitchToggle.setEnabled(true);
                         ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName()+ " - ready");
-                        listAdapter.add("["+currentDateTimeString+"] Connected to: "+ mDevice.getName());
-                        messageListView.smoothScrollToPosition(listAdapter.getCount() - 1);
                         mState = UART_PROFILE_CONNECTED;
                     }
                 });
             }
 
-            //*********Service Disconnected************//
             if (action.equals(UartService.ACTION_GATT_DISCONNECTED)) {
                 runOnUiThread(new Runnable() {
                     public void run() {
                         String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                         Log.d(TAG, "UART_DISCONNECT_MSG");
                         btnConnectDisconnect.setText("Connect");
-                        edtMessage.setEnabled(false);
-                        btnSend.setEnabled(false);
-                        Led2LevelChange.setEnabled(false);
                         Led2SwitchToggle.setEnabled(false);
                         ((TextView) findViewById(R.id.deviceName)).setText("Not Connected");
-                        listAdapter.add("["+currentDateTimeString+"] Disconnected to: "+ mDevice.getName());
                         mState = UART_PROFILE_DISCONNECTED;
                         mService.close();
-                        //setUiState();
 
                     }
                 });
             }
 
-
-            //*********************//
             if (action.equals(UartService.ACTION_GATT_SERVICES_DISCOVERED)) {
                 mService.enableTXNotification();
             }
-            //*********************//
-            if (action.equals(UartService.ACTION_DATA_AVAILABLE)) {
 
-                final byte[] txValue = intent.getByteArrayExtra(UartService.EXTRA_DATA);
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        try {
-                            String text = new String(txValue, "UTF-8");
-                            String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
-                            listAdapter.add("["+currentDateTimeString+"] RX: "+text);
-                            messageListView.smoothScrollToPosition(listAdapter.getCount() - 1);
-
-                        } catch (Exception e) {
-                            Log.e(TAG, e.toString());
-                        }
-                    }
-                });
-            }
-            //****************w*****//
             if (action.equals(UartService.DEVICE_DOES_NOT_SUPPORT_UART)){
                 showMessage("Device doesn't support UART. Disconnecting");
                 mService.disconnect();
@@ -338,7 +201,6 @@ comentado por vinicius */
         intentFilter.addAction(UartService.ACTION_GATT_CONNECTED);
         intentFilter.addAction(UartService.ACTION_GATT_DISCONNECTED);
         intentFilter.addAction(UartService.ACTION_GATT_SERVICES_DISCOVERED);
-        intentFilter.addAction(UartService.ACTION_DATA_AVAILABLE);
         intentFilter.addAction(UartService.DEVICE_DOES_NOT_SUPPORT_UART);
         return intentFilter;
     }
@@ -470,4 +332,3 @@ comentado por vinicius */
         }
     }
 }
-
