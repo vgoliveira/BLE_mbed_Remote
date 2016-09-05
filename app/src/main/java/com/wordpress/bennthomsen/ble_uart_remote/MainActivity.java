@@ -33,6 +33,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -59,8 +60,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     private UartService mService = null;
     private BluetoothDevice mDevice = null;
     private BluetoothAdapter mBtAdapter = null;
-    private Button btnConnectDisconnect;
-    private Switch Led2SwitchToggle;
+    private Button btnConnectDisconnect,led2Hold;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -71,10 +71,9 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             finish();
             return;
         }
-        btnConnectDisconnect=(Button) findViewById(R.id.btn_select);
-        Led2SwitchToggle=(Switch) findViewById(R.id.led2Switch);
+        btnConnectDisconnect = (Button) findViewById(R.id.btn_select);
+        led2Hold = (Button) findViewById(R.id.button_hold);
         service_init();
-
 
 
         // Handler Disconnect & Connect button
@@ -85,17 +84,15 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                     Log.i(TAG, "onClick - BT not enabled yet");
                     Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                     startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
-                }
-                else {
-                    if (btnConnectDisconnect.getText().equals("Connect")){
+                } else {
+                    if (btnConnectDisconnect.getText().equals("Connect")) {
 
                         //Connect button pressed, open DeviceListActivity class, with popup windows that scan for devices
                         Intent newIntent = new Intent(MainActivity.this, DeviceListActivity.class);
                         startActivityForResult(newIntent, REQUEST_SELECT_DEVICE);
                     } else {
                         //Disconnect button pressed
-                        if (mDevice!=null)
-                        {
+                        if (mDevice != null) {
                             mService.disconnect();
 
                         }
@@ -104,26 +101,30 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             }
         });
 
-        // Handler LED Switch
-        Led2SwitchToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        // Handler led2Hold
+        led2Hold.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
                 byte[] value;
                 try {
-                    if (isChecked) {
-                        value = LED2ON.getBytes("UTF-8");    // The switch is on
-                    } else {
-                        value = LED2OFF.getBytes("UTF-8");     // The switch is off
-                    }
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    value = LED2ON.getBytes("UTF-8");
                     mService.writeRXCharacteristic(value);
+                    led2Hold.setBackgroundColor(0xFFFDFBB3);
+                }
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    value = LED2OFF.getBytes("UTF-8");
+                    mService.writeRXCharacteristic(value);
+                    led2Hold.setBackgroundColor(0xFFCAC7C7);
+                }
                 } catch (UnsupportedEncodingException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
+                return true;
             }
         });
-
     }
-
     //UART service connected/disconnected
     private ServiceConnection mServiceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder rawBinder) {
@@ -155,7 +156,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                         Log.d(TAG, "UART_CONNECT_MSG");
                         btnConnectDisconnect.setText("Disconnect");
-                        Led2SwitchToggle.setEnabled(true);
+                        led2Hold.setEnabled(true);
                         ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName()+ " - ready");
                         mState = UART_PROFILE_CONNECTED;
                     }
@@ -168,7 +169,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                         Log.d(TAG, "UART_DISCONNECT_MSG");
                         btnConnectDisconnect.setText("Connect");
-                        Led2SwitchToggle.setEnabled(false);
+                        led2Hold.setEnabled(false);
                         ((TextView) findViewById(R.id.deviceName)).setText("Not Connected");
                         mState = UART_PROFILE_DISCONNECTED;
                         mService.close();

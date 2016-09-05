@@ -70,12 +70,14 @@
         </RelativeLayout>
     </LinearLayout>
 
-    <Switch
+
+    <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="LED2"
-        android:id="@+id/led2Switch"
-        android:checked="false"
-        android:enabled="false"/>
+        android:text="LED 2"
+        android:id="@+id/button_hold"
+        android:enabled="false"
+        android:background="#cac7c7"
+        android:textColor="#000000"/>
 
 </LinearLayout>
