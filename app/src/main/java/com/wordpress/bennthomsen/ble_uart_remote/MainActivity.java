@@ -105,22 +105,26 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         led2Hold.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                byte[] value;
-                try {
+                byte[] value = new byte[2];
+                //try {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    value = LED2ON.getBytes("UTF-8");
+                    //value = LED2ON.getBytes("UTF-8")
+                    value[0] = 0x01;
+                    value[1] = 0x07;
                     mService.writeRXCharacteristic(value);
                     led2Hold.setBackgroundColor(0xFFFDFBB3);
                 }
                 if (event.getAction() == MotionEvent.ACTION_UP) {
-                    value = LED2OFF.getBytes("UTF-8");
+                    //value = LED2OFF.getBytes("UTF-8");
+                    value[0] = 0x02;
+                    value[1] = 0x07;
                     mService.writeRXCharacteristic(value);
                     led2Hold.setBackgroundColor(0xFFCAC7C7);
                 }
-                } catch (UnsupportedEncodingException e) {
+                //} catch (UnsupportedEncodingException e) {
                     // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
+                  //  e.printStackTrace();
+                //}
                 return true;
             }
         });
@@ -179,7 +183,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             }
 
             if (action.equals(UartService.ACTION_GATT_SERVICES_DISCOVERED)) {
-                mService.enableTXNotification();
+               // mService.enableTXNotification();
             }
 
             if (action.equals(UartService.DEVICE_DOES_NOT_SUPPORT_UART)){
