@@ -29,8 +29,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.NfcAdapter;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Parcelable;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -43,6 +47,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.util.Date;
 
@@ -70,6 +75,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     private static final int TEST_LED = 0x07;
 
     private int mState = UART_PROFILE_DISCONNECTED;
+    private boolean isBound = false;
     private UartService mService = null;
     private BluetoothDevice mDevice = null;
     private BluetoothAdapter mBtAdapter = null;
@@ -78,6 +84,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+
         mBtAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBtAdapter == null) {
             Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
@@ -92,8 +99,17 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         options = (Button) findViewById(R.id.options);
         color = (Button) findViewById(R.id.color);
         init_stop = (Button) findViewById(R.id.init_stop);
-        service_init();
 
+        // don´t allow the user click on these buttons if not connected and GATT service discovered.
+        led2Hold.setEnabled(false);
+        time_more.setEnabled(false);
+        time_less.setEnabled(false);
+        dough_qnt.setEnabled(false);
+        options.setEnabled(false);
+        color.setEnabled(false);
+        init_stop.setEnabled(false);
+
+        service_init();
 
         // Handler Disconnect & Connect button
         btnConnectDisconnect.setOnClickListener(new View.OnClickListener() {
@@ -283,7 +299,7 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                 Log.e(TAG, "Unable to initialize Bluetooth");
                 finish();
             }
-
+            nfc_init(); // only check for NFC after ServiceConnection is finished;
         }
 
         public void onServiceDisconnected(ComponentName classname) {
@@ -305,13 +321,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                         Log.d(TAG, "UART_CONNECT_MSG");
                         btnConnectDisconnect.setText("Disconnect");
-                        led2Hold.setEnabled(true);
-                        time_more.setEnabled(true);
-                        time_less.setEnabled(true);
-                        dough_qnt.setEnabled(true);
-                        options.setEnabled(true);
-                        color.setEnabled(true);
-                        init_stop.setEnabled(true);
                         ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName()+ " - ready");
                         mState = UART_PROFILE_CONNECTED;
                     }
@@ -341,6 +350,14 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
 
             if (action.equals(UartService.ACTION_GATT_SERVICES_DISCOVERED)) {
                // mService.enableTXNotification();
+                led2Hold.setEnabled(true);
+                time_more.setEnabled(true);
+                time_less.setEnabled(true);
+                dough_qnt.setEnabled(true);
+                options.setEnabled(true);
+                color.setEnabled(true);
+                init_stop.setEnabled(true);
+
             }
 
             if (action.equals(UartService.DEVICE_DOES_NOT_SUPPORT_UART)){
@@ -351,6 +368,34 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
 
         }
     };
+    /*
+    Known bugs of nfc_init:
+        - Does not check if the device is there since .getRemoteDevice(deviceAddress) does not do it
+        - mDevice.getName() is returning null if the app connects to the machine before any manual attempt (using scanlist)
+    Possible solution:
+        Implements scan here using the MAC Address from tha NFC tag, but only connect if this was found in the scan process
+     */
+    private void nfc_init(){
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
+            NdefMessage[] msgs = null;
+            Parcelable[] rawMsgs = getIntent().getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+            String deviceAddress;
+
+            if (rawMsgs != null) {
+                msgs = new NdefMessage[rawMsgs.length];
+                for (int i = 0; i < rawMsgs.length; ++i) {
+                    msgs[i] = (NdefMessage) rawMsgs[i];
+                }
+                NdefRecord[] records = msgs[0].getRecords();
+                deviceAddress = new String(records[1].getPayload(), 1, records[1].getPayload().length-1, Charset.forName("UTF-8")); // record 1 contains the MAC Address
+                deviceAddress = deviceAddress.substring(2); // remove the language mark "en" coded in the NDEF text/plain record
+                mDevice = mBtAdapter.getDefaultAdapter().getRemoteDevice(deviceAddress); // não testa só retorna mDevice com o endereço passado
+                ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName()+ " - connecting");
+                mService.connect(deviceAddress);
+                Log.d(TAG, "... NFC_init mDevice= " + mDevice + " mService= " + mService);
+                }
+            }
+        }
 
     private void service_init() {
         Intent bindIntent = new Intent(this, UartService.class);
@@ -414,7 +459,6 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
         }
-
     }
 
     @Override
