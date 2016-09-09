@@ -52,15 +52,28 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
     public static final String TAG = "nRFUART";
     private static final int UART_PROFILE_CONNECTED = 20;
     private static final int UART_PROFILE_DISCONNECTED = 21;
-       private static final String LED2OFF = "led2 0.0";
-    private static final String LED2ON = "led2 1.0";
 
+    private static final int OPERATION = 0x00;
+    private static final int NO_OPERATION = 0x00;
+    private static final int COMMAND = 0x01;
+    private static final int PROGRAM = 0x02;
 
-       private int mState = UART_PROFILE_DISCONNECTED;
+    private static final int PRESSED = 0x01;
+    private static final int NOT_PRESSED = 0x00;
+
+    private static final int TIME_MORE = 0x04;
+    private static final int TIME_LESS = 0x05;
+    private static final int DOUGH_QNT = 0x02;
+    private static final int INIT_STOP = 0x06;
+    private static final int OPTIONS = 0x01;
+    private static final int COLOR = 0x03;
+    private static final int TEST_LED = 0x07;
+
+    private int mState = UART_PROFILE_DISCONNECTED;
     private UartService mService = null;
     private BluetoothDevice mDevice = null;
     private BluetoothAdapter mBtAdapter = null;
-    private Button btnConnectDisconnect,led2Hold;
+    private Button btnConnectDisconnect,led2Hold,time_more, time_less, dough_qnt, options, color, init_stop;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,6 +86,12 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
         }
         btnConnectDisconnect = (Button) findViewById(R.id.btn_select);
         led2Hold = (Button) findViewById(R.id.button_hold);
+        time_more = (Button) findViewById(R.id.button_time_more);
+        time_less = (Button) findViewById(R.id.button_time_less);
+        dough_qnt = (Button) findViewById(R.id.dough_qnt);
+        options = (Button) findViewById(R.id.options);
+        color = (Button) findViewById(R.id.color);
+        init_stop = (Button) findViewById(R.id.init_stop);
         service_init();
 
 
@@ -101,33 +120,159 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
             }
         });
 
-        // Handler led2Hold
+        // TEST PROGRAM
         led2Hold.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                byte[] value = new byte[2];
-                //try {
+                byte[] value;
+                value = new byte[] {NO_OPERATION,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED};
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    //value = LED2ON.getBytes("UTF-8")
-                    value[0] = 0x01;
-                    value[1] = 0x07;
+                    value[OPERATION] = PROGRAM;
+                    value[OPTIONS] = 1;
+                    value[DOUGH_QNT] = 1;
+                    value[COLOR] = 1;
+                    value[TIME_MORE] = 2;
+                    value[TIME_LESS] = 1;
+                    value[INIT_STOP] = 1;
                     mService.writeRXCharacteristic(value);
                     led2Hold.setBackgroundColor(0xFFFDFBB3);
                 }
                 if (event.getAction() == MotionEvent.ACTION_UP) {
-                    //value = LED2OFF.getBytes("UTF-8");
-                    value[0] = 0x02;
-                    value[1] = 0x07;
-                    mService.writeRXCharacteristic(value);
+                    //value[OPERATION] = COMMAND;
+                    //value[TEST_LED] = NOT_PRESSED;
+                    //mService.writeRXCharacteristic(value);
                     led2Hold.setBackgroundColor(0xFFCAC7C7);
                 }
-                //} catch (UnsupportedEncodingException e) {
-                    // TODO Auto-generated catch block
-                  //  e.printStackTrace();
-                //}
                 return true;
             }
         });
+
+        time_more.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                byte[] value;
+                value = new byte[] {NO_OPERATION,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED};
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    value[OPERATION] = COMMAND;
+                    value[TIME_MORE] = PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    time_more.setBackgroundColor(0xFFFDFBB3);
+                }
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    value[OPERATION] = COMMAND;
+                    value[TIME_MORE] = NOT_PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    time_more.setBackgroundColor(0xFFCAC7C7);
+                }
+                return true;
+            }
+        });
+
+        time_less.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                byte[] value;
+                value = new byte[] {NO_OPERATION,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED};
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    value[OPERATION] = COMMAND;
+                    value[TIME_LESS] = PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    time_less.setBackgroundColor(0xFFFDFBB3);
+                }
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    value[OPERATION] = COMMAND;
+                    value[TIME_LESS] = NOT_PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    time_less.setBackgroundColor(0xFFCAC7C7);
+                }
+                return true;
+            }
+        });
+
+        dough_qnt.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                byte[] value;
+                value = new byte[] {NO_OPERATION,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED};
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    value[OPERATION] = COMMAND;
+                    value[DOUGH_QNT] = PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    dough_qnt.setBackgroundColor(0xFFFDFBB3);
+                }
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    value[OPERATION] = COMMAND;
+                    value[DOUGH_QNT] = NOT_PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    dough_qnt.setBackgroundColor(0xFFCAC7C7);
+                }
+                return true;
+            }
+        });
+
+        options.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                byte[] value;
+                value = new byte[] {NO_OPERATION,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED};
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    value[OPERATION] = COMMAND;
+                    value[OPTIONS] = PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    options.setBackgroundColor(0xFFFDFBB3);
+                }
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    value[OPERATION] = COMMAND;
+                    value[OPTIONS] = NOT_PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    options.setBackgroundColor(0xFFCAC7C7);
+                }
+                return true;
+            }
+        });
+
+        color.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                byte[] value;
+                value = new byte[] {NO_OPERATION,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED};
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    value[OPERATION] = COMMAND;
+                    value[COLOR] = PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    color.setBackgroundColor(0xFFFDFBB3);
+                }
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    value[OPERATION] = COMMAND;
+                    value[COLOR] = NOT_PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    color.setBackgroundColor(0xFFCAC7C7);
+                }
+                return true;
+            }
+        });
+
+        init_stop.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                byte[] value;
+                value = new byte[] {NO_OPERATION,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED};
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    value[OPERATION] = COMMAND;
+                    value[INIT_STOP] = PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    init_stop.setBackgroundColor(0xFFFDFBB3);
+                }
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    value[OPERATION] = COMMAND;
+                    value[INIT_STOP] = NOT_PRESSED;
+                    mService.writeRXCharacteristic(value);
+                    init_stop.setBackgroundColor(0xFFCAC7C7);
+                }
+                return true;
+            }
+        });
+
     }
     //UART service connected/disconnected
     private ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -161,6 +306,12 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         Log.d(TAG, "UART_CONNECT_MSG");
                         btnConnectDisconnect.setText("Disconnect");
                         led2Hold.setEnabled(true);
+                        time_more.setEnabled(true);
+                        time_less.setEnabled(true);
+                        dough_qnt.setEnabled(true);
+                        options.setEnabled(true);
+                        color.setEnabled(true);
+                        init_stop.setEnabled(true);
                         ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName()+ " - ready");
                         mState = UART_PROFILE_CONNECTED;
                     }
@@ -174,6 +325,12 @@ public class MainActivity extends Activity implements RadioGroup.OnCheckedChange
                         Log.d(TAG, "UART_DISCONNECT_MSG");
                         btnConnectDisconnect.setText("Connect");
                         led2Hold.setEnabled(false);
+                        time_more.setEnabled(false);
+                        time_less.setEnabled(false);
+                        dough_qnt.setEnabled(false);
+                        options.setEnabled(false);
+                        color.setEnabled(false);
+                        init_stop.setEnabled(false);
                         ((TextView) findViewById(R.id.deviceName)).setText("Not Connected");
                         mState = UART_PROFILE_DISCONNECTED;
                         mService.close();
