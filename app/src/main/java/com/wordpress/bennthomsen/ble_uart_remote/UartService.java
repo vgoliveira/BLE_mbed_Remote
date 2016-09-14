@@ -265,7 +265,6 @@ public class UartService extends Service {
             return;
         }
         mBluetoothGatt.disconnect();
-
     }
 
     /**
