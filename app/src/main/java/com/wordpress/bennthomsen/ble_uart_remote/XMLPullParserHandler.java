@@ -1,17 +1,12 @@
 package com.wordpress.bennthomsen.ble_uart_remote;
 
-import android.util.Log;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 /**
@@ -20,19 +15,15 @@ import java.util.ArrayList;
 public class XMLPullParserHandler {
 
     private XmlPullParser parser;
+    private InputStream is;
+    XmlPullParserFactory factory;
 
-    XMLPullParserHandler(String fileName) {
-        XmlPullParserFactory factory = null;
+    XMLPullParserHandler(InputStream is) {
         try {
             factory = XmlPullParserFactory.newInstance();
             parser = factory.newPullParser();
-
-            File file = new File("/raw/" + fileName);
-            FileInputStream fis = new FileInputStream(file);
-
-            parser.setInput(fis, null);
-
-        } catch (XmlPullParserException | FileNotFoundException e) {
+            this.is = is;
+        } catch (XmlPullParserException e) {
             e.printStackTrace();
         }
     }
@@ -46,7 +37,10 @@ public class XMLPullParserHandler {
         int eventType;
         String text = "";
 
+
         try {
+            is.reset();
+            parser.setInput(is, null);
             eventType = parser.getEventType();
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 tagName = parser.getName();
@@ -71,6 +65,8 @@ public class XMLPullParserHandler {
                             recipe.setId(text);
                         } else if (tagName.equalsIgnoreCase("option")) {
                             recipe.setOption(text);
+                        } else if (tagName.equalsIgnoreCase("description")) {
+                            recipe.setDescription(text);
                         } else if (tagName.equalsIgnoreCase("weight")) {
                             recipe.setAvailableWeight(text);
                         } else if (parser.getName().equalsIgnoreCase("name")) {
@@ -97,13 +93,15 @@ public class XMLPullParserHandler {
         return null;
     }
 
-    ArrayList<String> parseForTitleList () {
+    ArrayList<String> parseForTagList (String tag) {
         ArrayList<String> titleList = new ArrayList<>();
         String tagName;
         int eventType;
         String text = "";
 
         try {
+            is.reset();
+            parser.setInput(is, null);
             eventType = parser.getEventType();
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 tagName = parser.getName();
@@ -116,7 +114,7 @@ public class XMLPullParserHandler {
                         break;
 
                     case XmlPullParser.END_TAG:
-                        if (tagName.equalsIgnoreCase("title")) {
+                        if (tagName.equalsIgnoreCase(tag)) {
                             titleList.add(text);
                         }
                         break;

@@ -40,13 +40,9 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
-import android.widget.RadioGroup;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.util.Date;
@@ -54,6 +50,7 @@ import java.util.Date;
 public class MainActivity extends Activity implements View.OnTouchListener {
     private static final int REQUEST_SELECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
+    public static final int REQUEST_SELECT_RECIPE = 3;
     public static final String TAG = "nRFUART";
     private static final int UART_PROFILE_CONNECTED = 20;
     private static final int UART_PROFILE_DISCONNECTED = 21;
@@ -78,7 +75,7 @@ public class MainActivity extends Activity implements View.OnTouchListener {
     private UartService mService = null;
     private BluetoothDevice mDevice = null;
     private BluetoothAdapter mBtAdapter = null;
-    private Button btnConnectDisconnect,led2Hold,time_more, time_less, dough_qnt, options, color, init_stop;
+    private Button btnConnectDisconnect,led2Hold,time_more, time_less, dough_qnt, options, color, init_stop,startRecipe;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -98,6 +95,7 @@ public class MainActivity extends Activity implements View.OnTouchListener {
         options = (Button) findViewById(R.id.button_options);
         color = (Button) findViewById(R.id.button_color);
         init_stop = (Button) findViewById(R.id.button_init_stop);
+        startRecipe = (Button) findViewById(R.id.startRecipesBookSelectionActivity);
 
         // don´t allow the user click on these buttons if not connected and GATT service discovered.
         led2Hold.setEnabled(false);
@@ -132,6 +130,18 @@ public class MainActivity extends Activity implements View.OnTouchListener {
                         }
                     }
                 }
+            }
+        });
+
+        //Handler startRecipe
+        startRecipe.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent bookIntent = new Intent(MainActivity.this, ListSelectionActivity.class);
+                bookIntent.putExtra ("file","recipes_books");
+                bookIntent.putExtra ("level","book");
+                bookIntent.putExtra ("list_title","Livros de receitas");
+                startActivityForResult(bookIntent, REQUEST_SELECT_RECIPE);
             }
         });
 

@@ -85,6 +85,9 @@ public class Recipe {
             return false;
         }
     }
+    public boolean[] getAvailableWeight(){
+        return weights;
+    }
     public Ingredient getIngredient (int index) {
         return ingredients.get(index);
     }
