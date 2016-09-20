@@ -1,5 +1,6 @@
 package com.wordpress.bennthomsen.ble_uart_remote;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,7 +8,7 @@ import java.util.List;
 /**
  * Created by vgarcia on 12/09/2016.
  */
-public class Recipe {
+public class Recipe implements Serializable {
     //constants
     public static final int W450 = 0;
     public static final int W600 = 1;
@@ -90,6 +91,9 @@ public class Recipe {
     }
     public Ingredient getIngredient (int index) {
         return ingredients.get(index);
+    }
+    public int getNumberofIngredients () {
+        return ingredients.size();
     }
     public String getTitle() {
         return this.title;

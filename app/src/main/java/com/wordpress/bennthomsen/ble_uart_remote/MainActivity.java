@@ -48,6 +48,7 @@ import java.text.DateFormat;
 import java.util.Date;
 
 public class MainActivity extends Activity implements View.OnTouchListener {
+
     private static final int REQUEST_SELECT_DEVICE = 1;
     private static final int REQUEST_ENABLE_BT = 2;
     public static final int REQUEST_SELECT_RECIPE = 3;
@@ -137,11 +138,11 @@ public class MainActivity extends Activity implements View.OnTouchListener {
         startRecipe.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent bookIntent = new Intent(MainActivity.this, ListSelectionActivity.class);
-                bookIntent.putExtra ("file","recipes_books");
-                bookIntent.putExtra ("level","book");
-                bookIntent.putExtra ("list_title","Livros de receitas");
-                startActivityForResult(bookIntent, REQUEST_SELECT_RECIPE);
+                Intent booksIntent = new Intent(MainActivity.this, SelectionListActivity.class);
+                booksIntent.putExtra ("file","recipes_books");
+                booksIntent.putExtra ("level","books");
+                booksIntent.putExtra ("list_title","Livros de receitas");
+                startActivityForResult(booksIntent, REQUEST_SELECT_RECIPE);
             }
         });
 

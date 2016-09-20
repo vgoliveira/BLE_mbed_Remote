@@ -1,9 +1,11 @@
 package com.wordpress.bennthomsen.ble_uart_remote;
 
+import java.io.Serializable;
+
 /**
  * Created by vgarcia on 13/09/2016.
  */
-public class Ingredient {
+public class Ingredient implements Serializable {
     private String name;
     private String[] measure;
     Ingredient(String name){
@@ -38,5 +40,8 @@ public class Ingredient {
         else {
             return null;
         }
+    }
+    String getName() {
+        return this.name;
     }
 }

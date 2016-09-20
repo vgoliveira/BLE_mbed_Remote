@@ -12,7 +12,7 @@ import android.widget.TextView;
 import java.io.InputStream;
 import java.util.ArrayList;
 
-public class ListSelectionActivity extends ListActivity {
+public class SelectionListActivity extends ListActivity {
 
     private ArrayList<String> bookTitles;
     private ArrayList<String> recipeTitles;
@@ -22,7 +22,10 @@ public class ListSelectionActivity extends ListActivity {
     private ArrayAdapter<String> listAdapter;
     private XMLPullParserHandler fetcher;
     private String level = "";
-    Bundle parameters;
+    private Bundle parameters;
+    private Recipe recipe;
+    private int selected_weight;
+    private Bundle bundle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,7 +38,7 @@ public class ListSelectionActivity extends ListActivity {
 
         level = parameters.getString("level");
         switch(level) {
-            case "book":
+            case "books":
                 listTitle.setText(parameters.getString("list_title"));
                 is = getResources().openRawResource(getResources().getIdentifier(parameters.getString("file"),"raw", getPackageName()));
                 fetcher = new XMLPullParserHandler(is);
@@ -44,7 +47,7 @@ public class ListSelectionActivity extends ListActivity {
                 listAdapter = new ArrayAdapter<String>(this, R.layout.simple_list_item, bookTitles);
                 setListAdapter(listAdapter);
                 break;
-            case "recipe":
+            case "recipes":
                 listTitle.setText(parameters.getString("list_title"));
                 is = getResources().openRawResource(getResources().getIdentifier(parameters.getString("file"),"raw", getPackageName()));
                 fetcher = new XMLPullParserHandler(is);
@@ -52,7 +55,7 @@ public class ListSelectionActivity extends ListActivity {
                 listAdapter = new ArrayAdapter<String>(this, R.layout.simple_list_item, recipeTitles);
                 setListAdapter(listAdapter);
                 break;
-            case "weight":
+            case "weights":
                 listTitle.setText(parameters.getString("list_title"));
                 availableWeights = new ArrayList<>();
                 boolean[] weights = parameters.getBooleanArray("available_weights");
@@ -81,23 +84,34 @@ public class ListSelectionActivity extends ListActivity {
         super.onListItemClick(l, v, position, id);
 
         switch(level) {
-            case "book":
+            case "books":
                 String filename = bookFiles.get(bookTitles.indexOf(getListAdapter().getItem(position).toString()));
-                Intent recipeIntent = new Intent(ListSelectionActivity.this, ListSelectionActivity.class);
-                recipeIntent.putExtra("file", filename);
-                recipeIntent.putExtra("level", "recipe");
-                recipeIntent.putExtra ("list_title",getListAdapter().getItem(position).toString());
+                Intent recipesIntent = new Intent(SelectionListActivity.this, SelectionListActivity.class);
+                recipesIntent.putExtra("file", filename);
+                recipesIntent.putExtra("level", "recipes");
+                recipesIntent.putExtra ("list_title",getListAdapter().getItem(position).toString());
+                startActivityForResult(recipesIntent, MainActivity.REQUEST_SELECT_RECIPE);
+                break;
+            case "recipes":
+                String test = getListAdapter().getItem(position).toString();
+                recipe = fetcher.parseForRecipe(getListAdapter().getItem(position).toString());
+                Intent weigthtsIntent = new Intent(SelectionListActivity.this, SelectionListActivity.class);
+                bundle = new Bundle();
+                bundle.putSerializable("recipe",recipe);
+                weigthtsIntent.putExtra("level", "weights");
+                weigthtsIntent.putExtra ("list_title",recipe.getTitle()+": escolha o peso");
+                weigthtsIntent.putExtra("available_weights", recipe.getAvailableWeight());
+                weigthtsIntent.putExtras(bundle); // problema
+                startActivityForResult(weigthtsIntent, MainActivity.REQUEST_SELECT_RECIPE);
+                break;
+            case "weights":
+                Intent recipeIntent = new Intent(SelectionListActivity.this, RecipeActivity.class);
+                recipe = (Recipe)getIntent().getSerializableExtra("recipe");
+                bundle = new Bundle();
+                bundle.putSerializable("recipe",recipe);
+                recipeIntent.putExtra("selectedWeight", getListAdapter().getItem(position).toString());
+                recipeIntent.putExtras(bundle);
                 startActivityForResult(recipeIntent, MainActivity.REQUEST_SELECT_RECIPE);
-                break;
-            case "recipe":
-                Recipe recipe = fetcher.parseForRecipe(getListAdapter().getItem(position).toString());
-                Intent weigthIntent = new Intent(ListSelectionActivity.this, ListSelectionActivity.class);
-                weigthIntent.putExtra("level", "weight");
-                weigthIntent.putExtra ("list_title",recipe.getTitle()+": escolha o peso");
-                weigthIntent.putExtra("available_weights", recipe.getAvailableWeight());
-                startActivityForResult(weigthIntent, MainActivity.REQUEST_SELECT_RECIPE);
-                break;
-            case "weight":
                 break;
         }
     }
