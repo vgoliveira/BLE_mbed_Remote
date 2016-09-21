@@ -1,6 +1,7 @@
 package com.wordpress.bennthomsen.ble_uart_remote;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -13,18 +14,19 @@ import android.widget.Toast;
 
 import java.util.Calendar;
 
-public class RecipeActivity extends Activity{
+public class RecipeActivity extends Activity {
 
     Bakery bakery;
     Recipe recipe;
     Ingredient ingredient;
-    private TextView recipeTitle,recipeBody;
+    private TextView recipeTitle, recipeBody;
     private Switch timerEnabler;
     private Button programRecipe;
     private TimePicker timer;
     private Bundle parameters;
     private RadioButton colorLight, colorMedium, colorDark;
-    int selectedWeight;
+    private int selectedWeight;
+    private boolean isConnected;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,17 +55,20 @@ public class RecipeActivity extends Activity{
                     timer.setEnabled(true);
                     timer.setCurrentHour(bakery.getMinHour());
                     timer.setCurrentMinute(bakery.getMinMinute());
+                    bakery.timerChecked(true);
 
                 } else {
                     timer.setEnabled(false);
+                    bakery.timerChecked(false);
                 }
             }
         });
 
-        recipe = (Recipe)getIntent().getSerializableExtra("recipe");
+        recipe = (Recipe) getIntent().getSerializableExtra("recipe");
         parameters = getIntent().getExtras();
+        isConnected = parameters.getBoolean("isConnected");
 
-        switch(parameters.getString("selectedWeight")){
+        switch (parameters.getString("selectedWeight")) {
             case "450 gramas":
                 selectedWeight = Recipe.W450;
                 break;
@@ -97,21 +102,36 @@ public class RecipeActivity extends Activity{
                         bakery.setColor(bakery.COLORDARK);
                     }
                 }
-                int i = bakery.checkTime(timer.getCurrentHour(), timer.getCurrentMinute());
-                if(timerEnabler.isChecked()){
+                if (timerEnabler.isChecked()) {
+                    int i = bakery.setTimer(timer.getCurrentHour(), timer.getCurrentMinute());
                     if (i == bakery.TIMETOOSHORT) {
-                        Toast.makeText(RecipeActivity.this, "Tempo para terminar é menor que o tempo da receita", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(RecipeActivity.this, "Tempo para terminar é menor que o tempo da receita", Toast.LENGTH_LONG).show();
+                        return;
 
                     } else if (i == bakery.TIMETOOLONG) {
-                        Toast.makeText(RecipeActivity.this, "Tempo para terminar é maior que o suportado pela máquina", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(RecipeActivity.this, "Tempo para terminar é maior que o suportado pela máquina", Toast.LENGTH_LONG).show();
+                        return;
 
                     } else if (i == bakery.TIMEOK) {
-                        Toast.makeText(RecipeActivity.this, "Tempo ok", Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(RecipeActivity.this, "Tempo ok", Toast.LENGTH_SHORT).show();
+                        bakery.setTimer(timer.getCurrentHour(), timer.getCurrentMinute());
 
+                    } else if (i == bakery.TIMERNOTAVAILABLE) {
+                        Toast.makeText(RecipeActivity.this, "Timer não está disponível para esta receita", Toast.LENGTH_LONG).show();
                     }
-                    Toast.makeText(RecipeActivity.this,"Color: " + bakery.getColor(),Toast.LENGTH_SHORT).show();
                 }
-
+                if(isConnected) {
+                    Intent result = new Intent();
+                    Bundle b = new Bundle();
+                    b.putSerializable("bakery", bakery);
+                    b.putSerializable("recipe", recipe);
+                    result.putExtras(b);
+                    setResult(MainActivity.REQUEST_SELECT_RECIPE, result);
+                    finish();
+                }
+                else {
+                    Toast.makeText(RecipeActivity.this, "Não está conectado com a máquina", Toast.LENGTH_LONG).show();
+                }
             }
         });
     }
@@ -120,16 +140,16 @@ public class RecipeActivity extends Activity{
         recipeTitle.setText(recipe.getTitle());
 
         //fill the recipe body
-        recipeBody.setText("\nReceita para " + parameters.getString("selectedWeight")+":\n\n");
-        for(int i=0; i < recipe.getNumberofIngredients();i++) {
-            ingredient=recipe.getIngredient(i);
-            recipeBody.setText(recipeBody.getText() + "- " + ingredient.getName()+" : "+ ingredient.getMeasure(selectedWeight)+ "\n");
+        recipeBody.setText("\nReceita para " + parameters.getString("selectedWeight") + ":\n\n");
+        for (int i = 0; i < recipe.getNumberofIngredients(); i++) {
+            ingredient = recipe.getIngredient(i);
+            recipeBody.setText(recipeBody.getText() + "- " + ingredient.getName() + " : " + ingredient.getMeasure(selectedWeight) + "\n");
 
         }
         recipeBody.setText(recipeBody.getText() + "\nModo de preparo:\n" + recipe.getDescription());
         recipeBody.setText(recipeBody.getText() + "\n\nTempo de preparo:\n" + bakery.getHour() + ":" + bakery.getMinute());
         if (bakery.getMinute() == 0) {
-            recipeBody.setText(recipeBody.getText()+"0");
+            recipeBody.setText(recipeBody.getText() + "0");
         }
         if (!bakery.isColorOptionAvailable() || !bakery.isTimerAvailable()) {
             recipeBody.setText(recipeBody.getText() + "\n\nObservações:");
@@ -143,10 +163,10 @@ public class RecipeActivity extends Activity{
     }
 
     public void setButtonsAvailability() {
-        if (!bakery.isColorOptionAvailable()){
-                this.colorLight.setEnabled(false);
-                this.colorMedium.setEnabled(false);
-                this.colorDark.setEnabled(false);
+        if (!bakery.isColorOptionAvailable()) {
+            this.colorLight.setEnabled(false);
+            this.colorMedium.setEnabled(false);
+            this.colorDark.setEnabled(false);
 
         }
         if (!bakery.isTimerAvailable()) {

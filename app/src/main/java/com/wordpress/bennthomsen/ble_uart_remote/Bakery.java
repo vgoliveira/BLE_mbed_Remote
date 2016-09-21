@@ -1,12 +1,15 @@
 package com.wordpress.bennthomsen.ble_uart_remote;
 
+import android.view.MotionEvent;
+
+import java.io.Serializable;
 import java.util.Calendar;
 
 /**
  * Created by vgarcia on 12/09/2016.
  */
 // This class must treat the specificities of the current bakery hardware
-public class Bakery {
+public class Bakery implements Serializable {
 
     private final boolean[] TIMERAVAILABILITY = {true, true, true, true, true, false, false, true, true, true, true, true};
     private final boolean[] COLORAVAILABILITY = {true, true, true, true, true, true, true, false, false, false, false, false}; //when available default always set as medium
@@ -18,11 +21,25 @@ public class Bakery {
     public final int COLORLIGHT = 1;
     public final int COLORMEDIUM = 2;
     public final int COLORDARK = 3;
+    public final int TIMERNOTAVAILABLE = 0;
     public final int TIMEOK = 1;
     public final int TIMETOOSHORT = 2;
     public final int TIMETOOLONG = 3;
-    private final int HOURMAX = 13;
+    private final int HOURMAX = 11; //it is actually 13 but 11 makes the algorithm easier and safe
     private final int TIMERSTEP = 10;
+
+    private static final int OPERATION = 0x00;
+    private static final int NO_OPERATION = 0x00;
+    private static final int COMMAND = 0x01;
+    private static final int PROGRAM = 0x02;
+    private static final int PRESSED = 0x01;
+    private static final int NOT_PRESSED = 0x00;
+    private static final int TIME_MORE = 0x04;
+    private static final int TIME_LESS = 0x05;
+    private static final int DOUGH_QNT = 0x02;
+    private static final int INIT_STOP = 0x06;
+    private static final int OPTIONS = 0x01;
+    private static final int COLOR = 0x03;
 
     private int option;
     private int selectedWeight;
@@ -33,6 +50,7 @@ public class Bakery {
     private int maxHour;
     private int minMinute;
     private int maxMinute;
+    private boolean isTimerChecked;
 
     Bakery(String option, int selectedWeight) {
         int opt = Integer.valueOf(option);
@@ -60,6 +78,8 @@ public class Bakery {
             selectedColor = COLORMEDIUM;
         } else
             selectedColor = 0;
+
+        isTimerChecked = false;
 
     }
 
@@ -93,6 +113,7 @@ public class Bakery {
         }
         return -1;
     }
+
     public void setColor(int color) {
         if (isColorOptionAvailable()) {
             if ((color == COLORLIGHT) || (color == COLORMEDIUM) || (color == COLORDARK)) {
@@ -100,40 +121,53 @@ public class Bakery {
             }
         }
     }
-    public int getColor(){
+
+    public int getColor() {
         return this.selectedColor;
     }
-    public void setTimer(int hour, int minute){
-        if(isTimerAvailable()) {
-            this.hour = hour;
-            this.minute = minute;
+
+    public int setTimer(int hour, int minute) {
+
+        if (isTimerAvailable()) {
+            switch (checkTime(hour, minute)) {
+                case TIMEOK:
+                    this.hour = hour;
+                    this.minute = minute;
+                    return TIMEOK;
+                case TIMETOOSHORT:
+                    return TIMETOOSHORT;
+                case TIMETOOLONG:
+                    return TIMETOOLONG;
+            }
         }
+        return TIMERNOTAVAILABLE;
     }
-    public int checkTime(int hour,int minute) {
+
+    private int checkTime(int hour, int minute) {
         boolean sameDay = false;
         Calendar c = Calendar.getInstance();
         setMinTime();
         setMaxTime();
-        if(maxHour > c.get(Calendar.HOUR_OF_DAY)) {
+        if (maxHour > c.get(Calendar.HOUR_OF_DAY)) {
             sameDay = true;
         }
         if (sameDay) {
-            return sameDaycheckTime(hour,minute,c.get(Calendar.HOUR_OF_DAY),maxHour,minHour);
-        }else {
+            return sameDaycheckTime(hour, minute, c.get(Calendar.HOUR_OF_DAY), maxHour, minHour);
+        } else {
             //shift the hours to get rid of day change in the calculation
             int shiftedHour = addHour(hour, HOURMAX);
             int shiftedCurrentHour = addHour(c.get(Calendar.HOUR_OF_DAY), HOURMAX);
             int shiftedMinHour = addHour(minHour, HOURMAX);
             int shiftedMaxHour = addHour(maxHour, HOURMAX);
-            return sameDaycheckTime(shiftedHour,minute,shiftedCurrentHour,shiftedMaxHour,shiftedMinHour);
+            return sameDaycheckTime(shiftedHour, minute, shiftedCurrentHour, shiftedMaxHour, shiftedMinHour);
         }
     }
 
-    private int addHour (int hour, int add) {
-        if ((hour+add)<24) {
-            return hour+add;
+    private int addHour(int hour, int add) {
+        if ((hour + add) < 24) {
+            return hour + add;
         } else {
-            return hour+add-24;
+            return hour + add - 24;
         }
     }
 
@@ -154,7 +188,7 @@ public class Bakery {
         return TIMEOK;
     }
 
-    private void setMinTime () {
+    private void setMinTime() {
         Calendar c = Calendar.getInstance();
         if ((c.get(Calendar.MINUTE) + getMinute()) < 60) {
             minMinute = c.get(Calendar.MINUTE) + getMinute();
@@ -165,10 +199,10 @@ public class Bakery {
             }
         } else {
             minMinute = c.get(Calendar.MINUTE) + getMinute() - 60;
-            if ((c.get(Calendar.HOUR_OF_DAY) + (getHour()+1)) < 24) {
-                minHour = c.get(Calendar.HOUR_OF_DAY) + (getHour()+1);
+            if ((c.get(Calendar.HOUR_OF_DAY) + (getHour() + 1)) < 24) {
+                minHour = c.get(Calendar.HOUR_OF_DAY) + (getHour() + 1);
             } else {
-                minHour = c.get(Calendar.HOUR_OF_DAY) + (getHour()+1) - 24;
+                minHour = c.get(Calendar.HOUR_OF_DAY) + (getHour() + 1) - 24;
             }
         }
     }
@@ -176,15 +210,104 @@ public class Bakery {
     private void setMaxTime() {
         Calendar c = Calendar.getInstance();
         maxMinute = c.get(Calendar.MINUTE);
-        maxHour = addHour(c.get(Calendar.HOUR_OF_DAY),HOURMAX);
+        maxHour = addHour(c.get(Calendar.HOUR_OF_DAY), HOURMAX);
     }
 
-    public int getMinHour(){
+    public int getMinHour() {
         setMinTime();
         return minHour;
     }
-    public int getMinMinute(){
+
+    public int getMinMinute() {
         setMinTime();
         return minMinute;
+    }
+
+    public void timerChecked(boolean status) {
+        this.isTimerChecked = status;
+    }
+
+    public boolean isTimerChecked() {
+        return this.isTimerChecked;
+    }
+
+    public byte[] setProgram(byte[] value) {
+
+        value = new byte[]{PROGRAM, 0, 0, 0, 0, 0, 1}; // set program and INT/STOP
+        //set options
+        value[OPTIONS] = (byte) option;
+        //set dough quantity
+        if (isWeightOptionAvailable() && selectedWeight == 1) {
+            value[DOUGH_QNT] = 1;
+        }
+        //set color
+        if (isColorOptionAvailable()) {
+            switch (getColor()) {
+                case COLORDARK:
+                    value[COLOR] = 1;
+                    break;
+                case COLORLIGHT:
+                    value[COLOR] = 2;
+                    break;
+            }
+        }
+        //set timer
+        if (isTimerAvailable() && isTimerChecked()) {
+            value[TIME_MORE] = calculateTimerClicks();
+        }
+
+        return value;
+    }
+
+    private byte calculateTimerClicks() {
+        int roundedFinishMinute;
+        int roundedRecipeMinute;
+        int adjustment = 0;
+        int clickCount = 0;
+
+        roundedRecipeMinute = getMinMinute();
+        adjustment = adjustment + getUnit(roundedRecipeMinute);
+        adjustment = adjustment + getUnit(this.minute);
+        roundedRecipeMinute = roundDownDecimal(getMinMinute());
+        roundedFinishMinute = roundDownDecimal(this.minute);
+
+        if(adjustment >= 5){
+            clickCount++;
+            if(adjustment>=15) {
+                clickCount++;
+            }
+        }
+        clickCount = clickCount + ((roundedFinishMinute - roundedRecipeMinute) / 10); //can be positive or negative
+
+        if (this.hour >= getMinHour()) { // finishes at the same day
+            clickCount = clickCount +((this.hour - getMinHour()) * 6);
+        }
+        else { // finishes at the next day
+            int shiftedFinishHour = addHour(this.hour,HOURMAX);
+            int shiftedRecipeHour = addHour(getMinHour(),HOURMAX);
+            clickCount = clickCount +((shiftedFinishHour - shiftedRecipeHour) * 6);
+        }
+
+         return (byte)clickCount;
+    }
+
+    private boolean isRoundable(int num) {
+        int decimal = num / 10;
+        decimal = decimal * 10;
+        if (decimal == num) {
+            return false;
+        }
+        return true;
+    }
+
+    private int getUnit(int num) {
+        int decimal = num / 10;
+        decimal = decimal * 10;
+        return num - decimal;
+    }
+
+    private int roundDownDecimal(int decimal){
+        decimal =  decimal/10;
+        return decimal * 10;
     }
 }

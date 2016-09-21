@@ -72,6 +72,9 @@ public class MainActivity extends Activity implements View.OnTouchListener {
     private static final int COLOR = 0x03;
     private static final int TEST_LED = 0x07;
 
+    private boolean isConnected;
+    private Bakery bakery;
+    private Recipe recipe;
     private int mState = UART_PROFILE_DISCONNECTED;
     private UartService mService = null;
     private BluetoothDevice mDevice = null;
@@ -106,6 +109,8 @@ public class MainActivity extends Activity implements View.OnTouchListener {
         options.setEnabled(false);
         color.setEnabled(false);
         init_stop.setEnabled(false);
+
+        isConnected = false;
 
         service_init();
 
@@ -142,6 +147,9 @@ public class MainActivity extends Activity implements View.OnTouchListener {
                 booksIntent.putExtra ("file","recipes_books");
                 booksIntent.putExtra ("level","books");
                 booksIntent.putExtra ("list_title","Livros de receitas");
+
+                //booksIntent.putExtra("isConnected", isConnected);
+                booksIntent.putExtra("isConnected", true);
                 startActivityForResult(booksIntent, REQUEST_SELECT_RECIPE);
             }
         });
@@ -206,6 +214,7 @@ public class MainActivity extends Activity implements View.OnTouchListener {
                         btnConnectDisconnect.setText("Disconnect");
                         ((TextView) findViewById(R.id.deviceName)).setText(mDevice.getName()+ " - ready");
                         mState = UART_PROFILE_CONNECTED;
+                        isConnected = true;
                     }
                 });
             }
@@ -226,6 +235,7 @@ public class MainActivity extends Activity implements View.OnTouchListener {
                         ((TextView) findViewById(R.id.deviceName)).setText("Not Connected");
                         mState = UART_PROFILE_DISCONNECTED;
                         mService.disconnect();
+                        isConnected = false;
 
                     }
                 });
@@ -377,6 +387,17 @@ public class MainActivity extends Activity implements View.OnTouchListener {
                     Log.d(TAG, "BT not enabled");
                     Toast.makeText(this, "Problem in BT Turning ON ", Toast.LENGTH_SHORT).show();
                     finish();
+                }
+                break;
+            case MainActivity.REQUEST_SELECT_RECIPE:
+                if (resultCode != Activity.RESULT_CANCELED ) {
+                    byte[] value = null;
+                    bakery = (Bakery) data.getSerializableExtra("bakery");
+                    recipe = (Recipe) data.getSerializableExtra("recipe");
+
+                    value = bakery.setProgram(value);
+
+                    Toast.makeText(this, "Timer numer of clicks: "+ value[TIME_MORE], Toast.LENGTH_SHORT).show();
                 }
                 break;
             default:
