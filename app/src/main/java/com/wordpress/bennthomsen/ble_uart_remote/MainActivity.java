@@ -72,6 +72,7 @@ public class MainActivity extends Activity implements View.OnTouchListener {
     private static final int COLOR = 0x03;
     private static final int TEST_LED = 0x07;
 
+    byte[] value;
     private boolean isConnected;
     private Bakery bakery;
     private Recipe recipe;
@@ -79,7 +80,7 @@ public class MainActivity extends Activity implements View.OnTouchListener {
     private UartService mService = null;
     private BluetoothDevice mDevice = null;
     private BluetoothAdapter mBtAdapter = null;
-    private Button btnConnectDisconnect,led2Hold,time_more, time_less, dough_qnt, options, color, init_stop,startRecipe;
+    private Button btnConnectDisconnect,time_more, time_less, dough_qnt, options, color, init_stop,startRecipe;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -92,7 +93,6 @@ public class MainActivity extends Activity implements View.OnTouchListener {
             return;
         }
         btnConnectDisconnect = (Button) findViewById(R.id.btn_select);
-        led2Hold = (Button) findViewById(R.id.button_hold);
         time_more = (Button) findViewById(R.id.button_time_more);
         time_less = (Button) findViewById(R.id.button_time_less);
         dough_qnt = (Button) findViewById(R.id.button_dough_qnt);
@@ -102,7 +102,6 @@ public class MainActivity extends Activity implements View.OnTouchListener {
         startRecipe = (Button) findViewById(R.id.startRecipesBookSelectionActivity);
 
         // don´t allow the user click on these buttons if not connected and GATT service discovered.
-        led2Hold.setEnabled(false);
         time_more.setEnabled(false);
         time_less.setEnabled(false);
         dough_qnt.setEnabled(false);
@@ -148,35 +147,11 @@ public class MainActivity extends Activity implements View.OnTouchListener {
                 booksIntent.putExtra ("level","books");
                 booksIntent.putExtra ("list_title","Livros de receitas");
 
-                //booksIntent.putExtra("isConnected", isConnected);
-                booksIntent.putExtra("isConnected", true);
+                booksIntent.putExtra("isConnected", isConnected);
                 startActivityForResult(booksIntent, REQUEST_SELECT_RECIPE);
             }
         });
 
-        // TEST PROGRAM
-        led2Hold.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                byte[] value;
-                value = new byte[] {NO_OPERATION,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED,NOT_PRESSED};
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    value[OPERATION] = PROGRAM;
-                    value[OPTIONS] = 1;
-                    value[DOUGH_QNT] = 1;
-                    value[COLOR] = 1;
-                    value[TIME_MORE] = 2;
-                    value[TIME_LESS] = 1;
-                    value[INIT_STOP] = 1;
-                    mService.writeRXCharacteristic(value);
-                    led2Hold.setBackgroundColor(0xFFFDFBB3);
-                }
-                if (event.getAction() == MotionEvent.ACTION_UP) {
-                    led2Hold.setBackgroundColor(0xFFCAC7C7);
-                }
-                return true;
-            }
-        });
         time_more.setOnTouchListener(this);
         time_less.setOnTouchListener(this);
         options.setOnTouchListener(this);
@@ -225,7 +200,6 @@ public class MainActivity extends Activity implements View.OnTouchListener {
                         String currentDateTimeString = DateFormat.getTimeInstance().format(new Date());
                         Log.d(TAG, "UART_DISCONNECT_MSG");
                         btnConnectDisconnect.setText("Connect");
-                        led2Hold.setEnabled(false);
                         time_more.setEnabled(false);
                         time_less.setEnabled(false);
                         dough_qnt.setEnabled(false);
@@ -243,7 +217,6 @@ public class MainActivity extends Activity implements View.OnTouchListener {
 
             if (action.equals(UartService.ACTION_GATT_SERVICES_DISCOVERED)) {
                // mService.enableTXNotification();
-                led2Hold.setEnabled(true);
                 time_more.setEnabled(true);
                 time_less.setEnabled(true);
                 dough_qnt.setEnabled(true);
@@ -391,13 +364,26 @@ public class MainActivity extends Activity implements View.OnTouchListener {
                 break;
             case MainActivity.REQUEST_SELECT_RECIPE:
                 if (resultCode != Activity.RESULT_CANCELED ) {
-                    byte[] value = null;
+                    value = null;
                     bakery = (Bakery) data.getSerializableExtra("bakery");
                     recipe = (Recipe) data.getSerializableExtra("recipe");
 
                     value = bakery.setProgram(value);
 
-                    Toast.makeText(this, "Timer numer of clicks: "+ value[TIME_MORE], Toast.LENGTH_SHORT).show();
+                    new AlertDialog.Builder(this)
+                            .setTitle("Atenção")
+                            .setMessage("Antes de continuar, cetifique-se que a bandeja foi inserida com todos os ingredientes.")
+                            .setPositiveButton("Continuar",new DialogInterface.OnClickListener()
+                            {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    //send program to the machine
+                                    mService.writeRXCharacteristic(value);
+                                }
+                            })
+                            .show();
+
+                    //register this operation in cloud
                 }
                 break;
             default:
@@ -415,10 +401,9 @@ public class MainActivity extends Activity implements View.OnTouchListener {
     public void onBackPressed() {
 
             new AlertDialog.Builder(this)
-                    .setIcon(android.R.drawable.ic_dialog_alert)
-                    .setTitle(R.string.popup_title)
-                    .setMessage(R.string.popup_message)
-                    .setPositiveButton(R.string.popup_yes, new DialogInterface.OnClickListener()
+                    .setTitle("Atenção")
+                    .setMessage("Deseja sair da aplicação?")
+                    .setPositiveButton("Sim", new DialogInterface.OnClickListener()
                     {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
@@ -427,9 +412,9 @@ public class MainActivity extends Activity implements View.OnTouchListener {
                             finish();
                         }
                     })
-                    .setNegativeButton(R.string.popup_no, null)
+                    .setNegativeButton("Não", null)
                     .show();
-        }
+    }
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
